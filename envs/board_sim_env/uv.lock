@@ -1577,29 +1577,21 @@ name = "openenv-board-sim-env"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-<<<<<<< HEAD
     { name = "fastapi" },
     { name = "openenv-core", extra = ["core"] },
     { name = "pydantic" },
     { name = "uvicorn" },
-=======
-    { name = "openenv-core", extra = ["core"] },
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 ]
 
 [package.optional-dependencies]
 dev = [
-<<<<<<< HEAD
     { name = "httpx" },
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
 
 [package.metadata]
 requires-dist = [
-<<<<<<< HEAD
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
     { name = "openenv-core", extras = ["core"], specifier = "==0.2.3" },
@@ -1607,11 +1599,6 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "uvicorn", specifier = ">=0.30.0" },
-=======
-    { name = "openenv-core", extras = ["core"], specifier = ">=0.2.2" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 ]
 provides-extras = ["dev"]
 

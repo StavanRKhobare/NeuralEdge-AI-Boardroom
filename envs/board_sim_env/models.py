@@ -41,12 +41,9 @@ class BoardSimObservation(Observation):
         description="One dict per NPC: {role, statement, vote, confidence}.",
     )
     round: int = Field(..., description="1-indexed round number (1..10).")
-<<<<<<< HEAD
     done: bool = Field(default=False, description="Whether the episode is terminal.")
     reward: float = Field(default=0.0, description="Reward from the latest step.")
     event_idx: Optional[int] = Field(default=None, description="Internal index in the EVENTS list.")
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
 
 class BoardState(BaseState):

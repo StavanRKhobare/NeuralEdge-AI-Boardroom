@@ -43,17 +43,11 @@ ROLE_WEIGHT: Dict[str, float] = {
     "Independent": 0.8,
 }
 
-<<<<<<< HEAD
 # NPCs and their BASE hidden agendas. At episode reset() these are
 # jittered per-seed so no single optimal decision path exists across episodes.
 # The agent never sees the final per-episode weights — it must infer them
 # from observable statements + vote history (Theory of Mind).
 NPC_AGENDAS_BASE: Dict[str, Dict[str, float]] = {
-=======
-# NPCs and their hidden agendas: weights on per-step state-deltas they
-# privately maximize. The agent never sees these.
-NPC_AGENDAS: Dict[str, Dict[str, float]] = {
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
     # CTO — wants product strength + team morale; hates burn.
     "CTO": {
         "product_readiness": 0.55,
@@ -84,7 +78,6 @@ NPC_AGENDAS: Dict[str, Dict[str, float]] = {
     },
 }
 
-<<<<<<< HEAD
 # Keep a module-level alias for backwards compatibility.
 NPC_AGENDAS: Dict[str, Dict[str, float]] = NPC_AGENDAS_BASE
 
@@ -106,8 +99,6 @@ def _jitter_agendas(seed: int) -> Dict[str, Dict[str, float]]:
             jittered[role][field] = round(w * factor, 4)
     return jittered
 
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 # Personality phrase banks for flavorful statements. State-aware: separate
 # phrase pools for "calm" vs "crisis" mode are selected based on current
 # state (low runway / low morale / high reg risk → crisis variant).
@@ -224,13 +215,8 @@ def _score_pitch(pitch: str, role: str) -> float:
 # Special key `done_reason` triggers terminal state.
 EVENTS: List[Dict[str, Any]] = [
     {
-<<<<<<< HEAD
         "title": "Market Disruption",
         "description": "A well-funded competitor launches a similar product at half the price, threatening your market position.",
-=======
-        "title": "Round 1 — Competitor undercut",
-        "description": "OpenAI just released a direct competitor product at 50% lower price.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["slash_prices", "differentiate", "acquire_startup"],
         "consequences": {
             "slash_prices": {"revenue_mult": 0.85, "market_share": 0.05, "investor_confidence": -0.10},
@@ -239,13 +225,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Enterprise Partnership Dilemma",
         "description": "A major enterprise client offers a $5M contract but demands source-code escrow and data access rights.",
-=======
-        "title": "Round 2 — Enterprise contract w/ source-code escrow",
-        "description": "A Fortune 500 enterprise wants to sign a $5M contract but demands source code escrow.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["accept_deal", "negotiate_terms", "reject_deal"],
         "consequences": {
             "accept_deal": {"revenue": 5_000_000, "regulatory_risk": 0.15, "team_morale": -0.05},
@@ -254,13 +235,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Talent Retention Crisis",
         "description": "Your core engineering team received competing offers. They are asking for a 40% raise or they walk.",
-=======
-        "title": "Round 3 — ML team demands 40% raise",
-        "description": "Key ML team of 8 engineers received competing offers and want a 40% salary increase.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["match_offers", "partial_match", "let_them_leave"],
         "consequences": {
             "match_offers": {"burn_rate": 200_000, "team_morale": 0.15, "runway_months": -2},
@@ -269,13 +245,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Regulatory Compliance Ultimatum",
         "description": "A new AI regulation takes effect in 90 days. Full compliance costs $2M; non-compliance risks your operating license.",
-=======
-        "title": "Round 4 — EU AI Act compliance deadline",
-        "description": "EU AI Act compliance deadline in 90 days. Full compliance costs $2M.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["full_compliance", "partial_compliance", "exit_EU_market"],
         "consequences": {
             "full_compliance": {"burn_rate": 100_000, "regulatory_risk": -0.20, "investor_confidence": 0.10},
@@ -284,13 +255,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Public Relations Crisis",
         "description": "Your AI model appears in a high-profile misuse incident. Media coverage is intensifying. Trust is at stake.",
-=======
-        "title": "Round 5 — Deepfake scandal press",
-        "description": "Viral negative press: 'AI startup's model used in deepfake scandal'.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["public_apology", "legal_action", "rebrand"],
         "consequences": {
             "public_apology": {"investor_confidence": -0.10, "team_morale": -0.10, "regulatory_risk": 0.10},
@@ -299,13 +265,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Strategic Acquisition Offer",
         "description": "A major tech conglomerate has approached with an acqui-hire offer at 2x your current valuation.",
-=======
-        "title": "Round 6 — Google acqui-hire offer at $80M (2x val)",
-        "description": "Google approaches for acqui-hire at $80M (2x current valuation).",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["accept_acquisition", "counter_offer", "reject_and_raise"],
         "consequences": {
             "accept_acquisition": {"done_reason": "acquisition", "revenue": 0, "_terminal_bonus": 30.0},
@@ -314,13 +275,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Institutional Investment Round",
         "description": "Late-stage investors are ready to wire $10M but want board seats and a 2x liquidation preference clause.",
-=======
-        "title": "Round 7 — Series C w/ board seats + 2x liq pref",
-        "description": "Series C investors want board seats and 2x liquidation preference.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["accept_terms", "negotiate", "bootstrap"],
         "consequences": {
             "accept_terms": {"revenue": 10_000_000, "investor_confidence": 0.20, "runway_months": 12},
@@ -329,13 +285,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Breakthrough Technology Decision",
         "description": "Your R&D team developed a new architecture that cuts AI inference costs by 60%. How do you deploy it?",
-=======
-        "title": "Round 8 — Compute breakthrough (-60% cost)",
-        "description": "Breakthrough: new model architecture cuts compute costs by 60%.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["pivot_product", "license_technology", "keep_internal"],
         "consequences": {
             "pivot_product": {"product_readiness": -0.10, "burn_rate": -150_000, "market_share": 0.05},
@@ -344,13 +295,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Internal Governance Crisis",
         "description": "An employee has leaked internal safety evaluations suggesting your flagship model has undisclosed risks.",
-=======
-        "title": "Round 9 — Whistleblower safety leak",
-        "description": "Whistleblower leaks internal safety concerns to the press.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["full_transparency", "damage_control", "internal_investigation"],
         "consequences": {
             "full_transparency": {"investor_confidence": -0.20, "team_morale": 0.15, "regulatory_risk": -0.10},
@@ -359,13 +305,8 @@ EVENTS: List[Dict[str, Any]] = [
         },
     },
     {
-<<<<<<< HEAD
         "title": "Exit Strategy Decision",
         "description": "The board must reach a final vote: pursue an IPO, accept a strategic acquisition, or remain independent.",
-=======
-        "title": "Round 10 — IPO vs acquisition vs stay private",
-        "description": "Board must vote: IPO preparation vs strategic acquisition vs stay private.",
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         "options": ["ipo", "acquisition", "stay_private"],
         "consequences": {
             "ipo": {"revenue_mult": 2.0, "burn_rate": 500_000, "investor_confidence": 0.30, "_terminal_bonus": 25.0},
@@ -438,11 +379,8 @@ class BoardSimEnvironment(Environment):
         super().__init__()
         self._state: BoardState = BoardState(episode_id=str(uuid4()), step_count=0)
         self._seed: int = 0
-<<<<<<< HEAD
         # Per-episode agenda weights (set in reset, used in _simulate_npc).
         self._episode_agendas: Dict[str, Dict[str, float]] = NPC_AGENDAS_BASE
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         self.reset()
 
     # ------------------------------------------------------------------ utils
@@ -454,7 +392,6 @@ class BoardSimEnvironment(Environment):
         return random.Random(h)
 
     def _simulate_npc(
-<<<<<<< HEAD
         self, role: str, event_idx: int, state: Dict[str, Any], round_label: int = 0
     ) -> Dict[str, Any]:
         """Deterministic NPC: rank options by agenda-weighted projected delta
@@ -469,15 +406,6 @@ class BoardSimEnvironment(Environment):
         # Trust modulates how much the NPC "leans toward" the CEO's direction.
         trust = state.get("trust", {}).get(role, 0.5)
         trust_bias = (trust - 0.5) * 0.30  # range: [-0.12, +0.15]
-=======
-        self, role: str, round_idx: int, state: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Deterministic NPC: rank options by agenda-weighted projected delta
-        plus small seeded noise; pick argmax; emit statement + vote + confidence."""
-        rng = self._npc_rng(role, round_idx)
-        event = EVENTS[round_idx]
-        agenda = NPC_AGENDAS[role]
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
         scored: List[Tuple[float, str]] = []
         for opt in event["options"]:
@@ -502,22 +430,14 @@ class BoardSimEnvironment(Environment):
         scored.sort(reverse=True)
         chosen = scored[0][1]
         margin = scored[0][0] - scored[1][0] if len(scored) > 1 else 1.0
-<<<<<<< HEAD
         # Trust affects confidence: a trusted CEO makes aligned NPCs more
         # confident, while an untrusted CEO makes opposing NPCs more stubborn.
         confidence = float(max(0.05, min(1.0, 0.5 + 0.5 * margin + trust_bias)))
-=======
-        confidence = float(max(0.05, min(1.0, 0.5 + 0.5 * margin)))
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
         # Pick a phrase deterministically per (round, role), state-aware.
         mode = "crisis" if _crisis_mode(state) else "calm"
         phrase_pool = PHRASES[role][mode]
-<<<<<<< HEAD
         phrase = phrase_pool[round_label % len(phrase_pool)]
-=======
-        phrase = phrase_pool[round_idx % len(phrase_pool)]
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         statement = f"{phrase} I'm voting {chosen}."
 
         return {
@@ -527,13 +447,8 @@ class BoardSimEnvironment(Environment):
             "confidence": confidence,
         }
 
-<<<<<<< HEAD
     def _simulate_all_npcs(self, event_idx: int, state: Dict[str, Any], round_label: int = 0) -> List[Dict[str, Any]]:
         return [self._simulate_npc(role, event_idx, state, round_label=round_label) for role in NPC_AGENDAS]
-=======
-    def _simulate_all_npcs(self, round_idx: int, state: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return [self._simulate_npc(role, round_idx, state) for role in NPC_AGENDAS]
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
     # ------------------------------------------------------------------ obs
     def _obs_state(self) -> Dict[str, Any]:
@@ -552,18 +467,12 @@ class BoardSimEnvironment(Environment):
         if round_idx >= len(EVENTS):
             event_desc, options = "Game over.", []
         else:
-<<<<<<< HEAD
             # Use shuffled event order so the CEO sees the correct event
             shuffled_idx = self._event_order[round_idx] if hasattr(self, '_event_order') else round_idx
             event = EVENTS[shuffled_idx]
             event_desc = f"{event['title']} — {event['description']}"
             options = list(event["options"])
         shuffled_idx = self._event_order[round_idx] if hasattr(self, '_event_order') else round_idx
-=======
-            event = EVENTS[round_idx]
-            event_desc = f"{event['title']} — {event['description']}"
-            options = list(event["options"])
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         return BoardSimObservation(
             state=self._obs_state(),
             event=event_desc,
@@ -572,16 +481,12 @@ class BoardSimEnvironment(Environment):
             round=self._state.state_dict["round"],
             done=done,
             reward=float(reward),
-<<<<<<< HEAD
             event_idx=shuffled_idx,
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         )
 
     # ------------------------------------------------------------------ reset
     def reset(self, seed: Optional[int] = None, episode_id: Optional[str] = None, **kwargs: Any) -> BoardSimObservation:
         self._seed = int(seed) if seed is not None else random.randint(0, 2**31 - 1)
-<<<<<<< HEAD
 
         # ── Per-episode agenda jitter ─────────────────────────────────────────
         # Each episode, NPC hidden weights shift ±25% (sign-preserving).
@@ -590,8 +495,6 @@ class BoardSimEnvironment(Environment):
         # behaviour (Theory of Mind), not from a memorised lookup table.
         self._episode_agendas = _jitter_agendas(self._seed)
 
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         self._state = BoardState(
             episode_id=episode_id or str(uuid4()),
             step_count=0,
@@ -607,18 +510,12 @@ class BoardSimEnvironment(Environment):
             "investor_confidence": 0.65,
             "regulatory_risk": 0.20,
             "profitability_score": 0.0,
-<<<<<<< HEAD
             "trust": {role: 0.5 for role in NPC_AGENDAS_BASE},
             "trust_history": [{"round": 0, **{role: 0.5 for role in NPC_AGENDAS_BASE}}],
-=======
-            "trust": {role: 0.5 for role in NPC_AGENDAS},
-            "trust_history": [{"round": 0, **{role: 0.5 for role in NPC_AGENDAS}}],
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
             "history": [],
             "done_reason": None,
             "winning_decision": None,
         }
-<<<<<<< HEAD
 
         # ── Shuffle event order per episode so the agent can't memorize ──
         # "Round 1 = always pick differentiate".  Deterministic given seed.
@@ -641,9 +538,6 @@ class BoardSimEnvironment(Environment):
 
         shuffled_idx = self._event_order[0]
         npc_statements = self._simulate_all_npcs(shuffled_idx, self._state.state_dict, round_label=0)
-=======
-        npc_statements = self._simulate_all_npcs(0, self._state.state_dict)
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         return self._build_obs(round_idx=0, npc_statements=npc_statements, reward=0.0, done=False)
 
     # ------------------------------------------------------------------ step
@@ -653,7 +547,6 @@ class BoardSimEnvironment(Environment):
         npc_statements: List[Dict[str, Any]],
         options: List[str],
         pitch: str = "",
-<<<<<<< HEAD
         trust: Optional[Dict[str, float]] = None,
     ) -> Tuple[str, Dict[str, float], Dict[str, float]]:
         """Weighted vote with persuasion and trust scaling.
@@ -672,27 +565,12 @@ class BoardSimEnvironment(Environment):
         Returns (winning_option, tally_by_option, pitch_score_by_role).
         """
         trust = trust or {}
-=======
-    ) -> Tuple[str, Dict[str, float], Dict[str, float]]:
-        """Weighted vote with persuasion.
-
-        Each NPC contributes ROLE_WEIGHT[role] * confidence to its voted option.
-        The CEO contributes ROLE_WEIGHT['CEO'] * 1.0 to the agent's pick.
-        A coalition pitch shifts up to 35% of each NPC's weight toward the
-        agent's pick proportional to how well the pitch hits that NPC's
-        hidden agenda keywords (capped 0..1 via _score_pitch). NPCs already
-        agreeing with the agent are unaffected.
-
-        Returns (winning_option, tally_by_option, pitch_score_by_role).
-        """
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         tally: Dict[str, float] = {opt: 0.0 for opt in options}
         pitch_scores: Dict[str, float] = {}
         if agent_decision in tally:
             tally[agent_decision] += ROLE_WEIGHT["CEO"] * 1.0
         for npc in npc_statements:
             role = npc["role"]
-<<<<<<< HEAD
             # Trust multiplier: clamp to [0.5, 1.5] so even a fully
             # distrusted NPC still has some voice (prevents degenerate play).
             trust_mult = max(0.5, min(1.5, trust.get(role, 0.5) * 2.0))
@@ -700,13 +578,6 @@ class BoardSimEnvironment(Environment):
             ps = _score_pitch(pitch, role)
             pitch_scores[role] = ps
             if npc["vote"] == agent_decision or agent_decision not in tally:
-=======
-            base = ROLE_WEIGHT[role] * npc["confidence"]
-            ps = _score_pitch(pitch, role)
-            pitch_scores[role] = ps
-            if npc["vote"] == agent_decision or agent_decision not in tally:
-                # Already aligned — full weight on their (and agent's) pick.
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
                 if npc["vote"] in tally:
                     tally[npc["vote"]] += base
                 continue
@@ -714,7 +585,6 @@ class BoardSimEnvironment(Environment):
             shift_frac = 0.35 * ps
             tally[npc["vote"]] += base * (1.0 - shift_frac)
             tally[agent_decision] += base * shift_frac
-<<<<<<< HEAD
         # §10: tie-break — if two options score equally, prefer the CEO's pick
         # (max() picks the first key on a tie, which is insertion-order; we
         # reinsert agent_decision first so it wins ties in its favour).
@@ -724,9 +594,6 @@ class BoardSimEnvironment(Environment):
         else:
             ordered = tally
         winner = max(ordered, key=lambda k: ordered[k])
-=======
-        winner = max(tally, key=lambda k: tally[k])
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         return winner, tally, pitch_scores
 
     def _apply_consequence(self, conseq: Dict[str, Any]) -> None:
@@ -766,13 +633,9 @@ class BoardSimEnvironment(Environment):
             )
 
         round_idx = s["round"] - 1
-<<<<<<< HEAD
         # Use shuffled event order (set in reset)
         shuffled_idx = self._event_order[round_idx] if hasattr(self, '_event_order') else round_idx
         event = EVENTS[shuffled_idx]
-=======
-        event = EVENTS[round_idx]
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
         # Validate decision; fall back to first option on invalid input
         # (slight penalty so the policy learns to format actions correctly).
@@ -780,7 +643,6 @@ class BoardSimEnvironment(Environment):
         decision = event["options"][0] if invalid_action else action.decision
 
         # NPC votes (DETERMINISTIC — same as what was shown in last obs).
-<<<<<<< HEAD
         npc_statements = self._simulate_all_npcs(shuffled_idx, s, round_label=round_idx)
 
         # Resolve weighted vote (with optional persuasion via coalition_pitch).
@@ -789,14 +651,6 @@ class BoardSimEnvironment(Environment):
         winning_decision, vote_tally, pitch_scores = self._resolve_vote(
             decision, npc_statements, event["options"],
             pitch=pitch_text, trust=s["trust"],
-=======
-        npc_statements = self._simulate_all_npcs(round_idx, s)
-
-        # Resolve weighted vote (with optional persuasion via coalition_pitch).
-        pitch_text = (action.coalition_pitch or "") if hasattr(action, "coalition_pitch") else ""
-        winning_decision, vote_tally, pitch_scores = self._resolve_vote(
-            decision, npc_statements, event["options"], pitch=pitch_text,
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         )
 
         # Snapshot pre-state for reward shaping.
@@ -804,16 +658,11 @@ class BoardSimEnvironment(Environment):
         old_trust_sum = sum(s["trust"].values())
 
         # Apply consequence of the WINNING decision (this is what actually happens).
-<<<<<<< HEAD
         conseq = dict(event["consequences"][winning_decision])  # shallow copy
-=======
-        conseq = event["consequences"][winning_decision]
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         terminal_bonus = float(conseq.get("_terminal_bonus", 0.0))
         if conseq.get("done_reason"):
             s["done_reason"] = conseq["done_reason"]
 
-<<<<<<< HEAD
         # Apply per-episode consequence noise (±15%)
         noise_dict = getattr(self, '_consequence_noise', {}).get(
             self._event_order[round_idx] if hasattr(self, '_event_order') else round_idx, {}
@@ -829,9 +678,6 @@ class BoardSimEnvironment(Environment):
                 noisy_conseq[k] = v
 
         self._apply_consequence(noisy_conseq)
-=======
-        self._apply_consequence(conseq)
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         self._advance_runway()
 
         # Trust updates: aligned NPCs +0.05; opposed -0.05 (clamped 0.1..1.0).
@@ -862,23 +708,17 @@ class BoardSimEnvironment(Environment):
             {"round": s["round"], **{role: float(s["trust"][role]) for role in NPC_AGENDAS}}
         )
 
-<<<<<<< HEAD
         # ----- Reward shaping (§9.5 tweaks applied) -----
         # §9.5-1: Normalize Δ profitability by 100 so its magnitude matches
         # the other reward terms (coalition ±0.2..0.5, trust ±0.06, pitch 0..0.4).
         # Without this, large score swings dominate and obscure the other signals.
         reward = (new_score - old_score) / 100.0                          # primary signal (normalized)
-=======
-        # ----- Reward shaping -----
-        reward = (new_score - old_score)                                  # primary signal
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         reward += 0.5 if winning_decision == decision else -0.2           # coalition bonus / penalty
         reward += 0.3 * (sum(s["trust"].values()) - old_trust_sum)        # trust delta
         # Persuasion bonus: when a non-empty pitch helps swing the vote toward
         # the agent's pick, reward the *quality* of that argument. Mean pitch
         # score across NPCs the agent had to convince (those whose vote != decision).
         opposed = [npc["role"] for npc in npc_statements if npc["vote"] != decision]
-<<<<<<< HEAD
         if pitch_text.strip():
             # §9.5-3: small +0.05 bonus for ANY non-empty pitch — bootstraps
             # the model into using the pitch channel before it's good at it.
@@ -886,11 +726,6 @@ class BoardSimEnvironment(Environment):
             if opposed:
                 avg_persuasion = sum(pitch_scores[r] for r in opposed) / len(opposed)
                 reward += 0.4 * avg_persuasion
-=======
-        if pitch_text.strip() and opposed:
-            avg_persuasion = sum(pitch_scores[r] for r in opposed) / len(opposed)
-            reward += 0.4 * avg_persuasion
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
         if invalid_action:
             reward -= 0.5                                                  # format penalty
 
@@ -899,13 +734,9 @@ class BoardSimEnvironment(Environment):
         if s["runway_months"] <= 0:
             s["done_reason"] = s["done_reason"] or "runway_exhausted"
             terminal_now = True
-<<<<<<< HEAD
             # §9.5-2: reduced from -5.0 to -2.0 so one bad arc doesn't dwarf
             # a whole episode of gradient signal and drown out learning.
             reward -= 2.0
-=======
-            reward -= 5.0
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 
         s["round"] += 1
         self._state.step_count += 1
@@ -927,7 +758,6 @@ class BoardSimEnvironment(Environment):
         # ----- Build next observation -----
         if terminal_now or s["round"] > len(EVENTS):
             next_npcs: List[Dict[str, Any]] = []
-<<<<<<< HEAD
             next_event_idx = min(s["round"] - 1, len(EVENTS) - 1)
         else:
             next_round_idx = s["round"] - 1
@@ -936,15 +766,6 @@ class BoardSimEnvironment(Environment):
 
         return self._build_obs(
             round_idx=min(s["round"] - 1, len(EVENTS) - 1),
-=======
-            next_round_idx = min(s["round"] - 1, len(EVENTS) - 1)
-        else:
-            next_round_idx = s["round"] - 1
-            next_npcs = self._simulate_all_npcs(next_round_idx, s)
-
-        return self._build_obs(
-            round_idx=next_round_idx,
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
             npc_statements=next_npcs,
             reward=reward,
             done=terminal_now,

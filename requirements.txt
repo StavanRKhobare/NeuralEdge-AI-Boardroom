@@ -13,9 +13,6 @@ pydantic>=2.0
 fastapi>=0.115
 uvicorn>=0.30
 matplotlib>=3.8
-<<<<<<< HEAD
 python-dotenv>=1.0
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 # Unsloth: install separately on Colab via pip --no-deps to avoid PyPI conflicts:
 #   pip install --no-deps unsloth

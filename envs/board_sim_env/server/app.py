@@ -3,14 +3,11 @@
 
 """
 FastAPI application for the Board Sim Env Environment.
-<<<<<<< HEAD
 
 The openenv framework's built-in /reset and /step endpoints are stateless
 (fresh env per request). We add custom /game/reset and /game/step routes
 that use a single persistent GameManager instance so multi-round episodes
 work correctly from the frontend.
-=======
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 """
 
 try:
@@ -30,7 +27,6 @@ except (ImportError, ValueError):
     from models import BoardSimAction, BoardSimObservation  # type: ignore
     from server.board_sim_env_environment import BoardSimEnvironment  # type: ignore
 
-<<<<<<< HEAD
 import json
 import httpx
 
@@ -124,16 +120,11 @@ _QWEN_SYSTEM = (
 
 
 # ── Create the openenv app (for /health, /schema, /ws, etc.) ───────
-=======
-
-# Create the app with web interface and README integration
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 app = create_app(
     BoardSimEnvironment,
     BoardSimAction,
     BoardSimObservation,
     env_name="board_sim_env",
-<<<<<<< HEAD
     max_concurrent_envs=64,
 )
 
@@ -231,11 +222,6 @@ async def qwen_decide(req: QwenDecideRequest):
 
 
 # ── Entry point ────────────────────────────────────────────────────
-=======
-    max_concurrent_envs=64,  # increased to allow 64 concurrent WebSocket sessions
-)
-
->>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
 def main(host: str = "0.0.0.0", port: int = 8000):
     import uvicorn
     uvicorn.run(app, host=host, port=port)
