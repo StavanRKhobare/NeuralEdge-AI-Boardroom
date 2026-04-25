@@ -1,13 +1,16 @@
-"""Random-policy baseline for BoardSimEnv.
+"""Sanity-check random-policy script for BoardSimEnv.
 
-Runs N episodes with uniformly random decisions, prints summary stats, and
-writes:
-  - assets/baseline.csv               per-episode final profitability
-  - assets/baseline_distribution.png  histogram of final profitabilities
+NOTE: this is **not** the canonical baseline used in the headline
+trained-vs-baseline comparison. The canonical baseline is
+**base Qwen3-4B without LoRA**, computed inside `notebooks/train_grpo_v2.ipynb`
+(and the mirrored `Training.py` script). A coin-flip is not a
+competitive opponent for a 4 B language model choosing among 3
+well-formed strings; we keep this script only as a quick env-health
+check (it confirms the env is reachable and rewards stay in range).
 
-This is a real measurement, not a fabricated plot. The trained agent's
-reward curve (from notebooks/train_grpo.ipynb) is overlaid against this
-baseline mean for the README's results section.
+Outputs:
+  - assets/random_sanity.csv               per-episode final profitability
+  - assets/random_sanity_distribution.png  histogram of final profitabilities
 """
 
 from __future__ import annotations
@@ -70,7 +73,7 @@ def main() -> None:
     os.makedirs(assets_dir, exist_ok=True)
 
     # CSV
-    csv_path = os.path.join(assets_dir, "baseline.csv")
+    csv_path = os.path.join(assets_dir, "random_sanity.csv")
     with open(csv_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["episode", "final_profitability", "total_reward"])
@@ -87,11 +90,11 @@ def main() -> None:
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(os.path.join(assets_dir, "baseline_distribution.png"), dpi=120)
+    plt.savefig(os.path.join(assets_dir, "random_sanity_distribution.png"), dpi=120)
     plt.close()
 
     print(f"\nWrote {csv_path}")
-    print(f"Wrote {os.path.join(assets_dir, 'baseline_distribution.png')}")
+    print(f"Wrote {os.path.join(assets_dir, 'random_sanity_distribution.png')}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# NeuralEdge AI Boardroom — Frontend API Specification
+# BoardSim — Frontend API Specification
 
 ## Overview
 The frontend communicates with the backend via REST/HTTP or WebSocket endpoints. The backend is a FastAPI server running at a configurable base URL (default: `http://localhost:8000` for local dev, or `https://<USER>-board-sim-env.hf.space` for production).
@@ -54,35 +54,35 @@ The frontend communicates with the backend via REST/HTTP or WebSocket endpoints.
       "done_reason": null,
       "winning_decision": null
     },
-    "event": "Round 1 — Series-B runway crunch\nDescription: You've got 14 months of runway at current burn. Two paths: cut costs or raise.",
+    "event": "New Competitor Entry — A larger competitor enters your core market with aggressive pricing and threatens your customer base.",
     "options": [
-      "cut_costs",
-      "raise_capital",
-      "reduce_scope"
+      "cut_prices",
+      "double_down_on_quality",
+      "form_strategic_partnership"
     ],
     "npc_statements": [
       {
         "role": "CTO",
-        "statement": "Look, the architecture won't survive shortcuts here.",
-        "vote": "cut_costs",
-        "confidence": 0.81
+        "statement": "From an operational standpoint, the trade-offs here are clear. I'm voting double_down_on_quality.",
+        "vote": "double_down_on_quality",
+        "confidence": 0.78
       },
       {
         "role": "CFO",
-        "statement": "The numbers do not lie, and right now they're whispering.",
-        "vote": "cut_costs",
+        "statement": "From a fiduciary standpoint, only one of these is defensible. I'm voting cut_prices.",
+        "vote": "cut_prices",
         "confidence": 0.66
       },
       {
         "role": "Investor Rep",
-        "statement": "Sequoia isn't here for incremental.",
-        "vote": "raise_capital",
-        "confidence": 0.74
+        "statement": "We were not funded to play it safe. I'm voting form_strategic_partnership.",
+        "vote": "form_strategic_partnership",
+        "confidence": 0.70
       },
       {
         "role": "Independent",
-        "statement": "Long-term reputation outlasts any single quarter.",
-        "vote": "cut_costs",
+        "statement": "Long-term reputation outlasts any single quarter. I'm voting double_down_on_quality.",
+        "vote": "double_down_on_quality",
         "confidence": 0.59
       }
     ],
@@ -105,8 +105,8 @@ The frontend communicates with the backend via REST/HTTP or WebSocket endpoints.
 ```json
 {
   "action": {
-    "decision": "cut_costs",
-    "coalition_pitch": "Optional persuasive text targeting NPC agendas (unused in v1)"
+    "decision": "double_down_on_quality",
+    "coalition_pitch": "Investing in product quality protects long-term reputation and reduces operational risk while preserving margin discipline."
   }
 }
 ```

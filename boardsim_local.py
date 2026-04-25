@@ -1,8 +1,14 @@
 """
 boardsim_local.py
 =================
-Self-contained local GRPO training script for the NeuralEdge BoardSim environment.
-No HuggingFace tokens, no WandB, no Docker, no HF Spaces required.
+Self-contained local GRPO training script for the BoardSim environment
+(generic, organization-agnostic boardroom simulation). No HuggingFace tokens,
+no WandB, no Docker, no HF Spaces required.
+
+Note: this is the *local dev script*. The canonical OpenEnv environment that
+runs on the HF Space and that the notebook trains against lives in
+`envs/board_sim_env/server/board_sim_env_environment.py` and has the full
+10-event timeline, sentence-transformer pitch scorer, and CEO weight 2.5x.
 
 Requirements (pip install before running):
     pip install torch transformers trl>=0.12 datasets accelerate matplotlib numpy peft
@@ -38,38 +44,92 @@ AGENDAS = {
     'Independent':  {'engineering': 0.2, 'morale': 0.3, 'growth': 0.2, 'safety': 0.3},
 }
 
+# Generic, organization-agnostic events (subset of the canonical 10 events
+# in the OpenEnv server). The local script is a small dev tool — the full
+# 10-event timeline lives in `envs/board_sim_env/server/board_sim_env_environment.py`.
 EVENTS = [
     {
-        'text': 'Major enterprise client threatens to churn unless we add SOC-2 compliance within 90 days.',
+        'text': 'Major client threatens to churn unless we close a compliance gap within 90 days.',
         'options': ['accelerate_compliance', 'negotiate_extension', 'offer_refund_exit'],
         'axis_impact': {'engineering': -0.3, 'morale': -0.1, 'growth': -0.2, 'safety': +0.4},
         'option_bias': {'accelerate_compliance': 'safety', 'negotiate_extension': 'growth', 'offer_refund_exit': 'morale'},
     },
     {
-        'text': 'Series C term sheet arrived — 40% dilution, but 18 months runway extension.',
+        'text': 'Late-stage funding term sheet arrived — 40% dilution, but 18 months runway extension.',
         'options': ['accept_terms', 'counter_offer', 'seek_alternative_investors'],
         'axis_impact': {'engineering': 0.0, 'morale': +0.1, 'growth': +0.3, 'safety': -0.1},
         'option_bias': {'accept_terms': 'safety', 'counter_offer': 'growth', 'seek_alternative_investors': 'engineering'},
     },
     {
-        'text': 'Star ML engineer received competing offer; costs +$60k/yr to match.',
-        'options': ['match_offer', 'promote_internally', 'let_them_go'],
+        'text': 'A top performer received a competing offer; costs +$60k/yr to match.',
+        'options': ['match_offer', 'promote_internally', 'accept_attrition'],
         'axis_impact': {'engineering': +0.2, 'morale': +0.3, 'growth': 0.0, 'safety': -0.1},
-        'option_bias': {'match_offer': 'morale', 'promote_internally': 'engineering', 'let_them_go': 'growth'},
+        'option_bias': {'match_offer': 'morale', 'promote_internally': 'engineering', 'accept_attrition': 'growth'},
     },
     {
-        'text': 'Regulator requests audit of our model outputs for bias within 60 days.',
+        'text': 'A regulator requests an audit of internal practices within 60 days.',
         'options': ['full_cooperation', 'limited_disclosure', 'seek_legal_delay'],
         'axis_impact': {'engineering': -0.1, 'morale': -0.1, 'growth': -0.1, 'safety': +0.5},
         'option_bias': {'full_cooperation': 'safety', 'limited_disclosure': 'growth', 'seek_legal_delay': 'engineering'},
     },
     {
-        'text': 'Competitor launched similar product at 30% lower price point.',
+        'text': 'A larger competitor launched a similar offering at a 30% lower price point.',
         'options': ['cut_price', 'double_down_on_quality', 'pivot_upmarket'],
         'axis_impact': {'engineering': 0.0, 'morale': -0.2, 'growth': +0.2, 'safety': 0.0},
         'option_bias': {'cut_price': 'growth', 'double_down_on_quality': 'engineering', 'pivot_upmarket': 'safety'},
     },
 ]
+
+
+# Per-role manifestos for the semantic pitch scorer (TF-IDF cosine).
+# This replaces the older keyword-flip logic (`if any(kw in pitch.lower() ...)`)
+# which the agent could trivially game by spraying tokens.
+ROLE_MANIFESTOS = {
+    'CTO': (
+        'Operational excellence and engineering quality come first. Protect the team. '
+        'Reduce technical risk. Avoid shortcuts that create future failures. Invest in '
+        'reliability, infrastructure, and the people who build and maintain the system.'
+    ),
+    'CFO': (
+        'Capital discipline is the priority. Watch the burn, extend runway, protect the '
+        'balance sheet. Be cautious with regulatory exposure and prefer measured, '
+        'defensible spending. Keep the company solvent and audit-ready.'
+    ),
+    'Investor Rep': (
+        'Growth, market share, and ambitious returns drive value. Move fast and play to '
+        'win the category. Bold, scalable bets matter more than incremental optimization. '
+        'Investors expect aggressive expansion and decisive moves on revenue and valuation.'
+    ),
+    'Independent': (
+        'Long-term reputation, governance, and stakeholder trust are decisive. Act with '
+        'transparency and ethical responsibility. Avoid moves that compromise credibility '
+        'or invite regulatory and societal backlash. Preserve consensus.'
+    ),
+}
+
+
+def _build_pitch_scorer():
+    """Return a function (pitch, role) -> [0,1] using TF-IDF cosine sim
+    over (1,2)-grams. NOT a keyword match: properly stop-worded, IDF-weighted
+    bag-of-bigrams against per-role manifestos."""
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+    except Exception:
+        return lambda pitch, role: 0.0
+    vec = TfidfVectorizer(stop_words='english', ngram_range=(1, 2), min_df=1)
+    vec.fit(list(ROLE_MANIFESTOS.values()))
+    role_vecs = {r: vec.transform([m]) for r, m in ROLE_MANIFESTOS.items()}
+    def _score(pitch: str, role: str) -> float:
+        if not pitch or not pitch.strip():
+            return 0.0
+        v = vec.transform([pitch])
+        sim = float(cosine_similarity(v, role_vecs[role])[0, 0])
+        return max(0.0, min(1.0, sim * 1.4))
+    return _score
+
+
+_score_pitch = _build_pitch_scorer()
 
 
 @dataclasses.dataclass
@@ -168,20 +228,18 @@ class BoardSimEnv:
         votes = {m: _member_vote(m, self._obs.options, event, self._state, self._rng)
                  for m in BOARD_MEMBERS}
 
-        # pitch bonus: if pitch mentions a member's axis keyword, flip their vote
+        # Persuasion: each NPC's vote can swing toward the agent's pick with
+        # probability proportional to the SEMANTIC alignment of the pitch with
+        # the NPC's manifesto (TF-IDF cosine, not keyword presence). The cap
+        # is 0.55 to mirror the canonical OpenEnv server-side environment.
         if pitch:
-            pitch_lower = pitch.lower()
-            flip_keywords = {
-                'CTO':          ['engineering', 'technical', 'morale', 'team'],
-                'CFO':          ['cash', 'runway', 'burn', 'fiscal', 'discipline'],
-                'Investor Rep': ['growth', 'market', 'exit', 'revenue', 'scale'],
-                'Independent':  ['governance', 'reputation', 'consensus', 'long-term'],
-            }
-            for m, kws in flip_keywords.items():
-                if any(kw in pitch_lower for kw in kws) and votes[m] != decision:
-                    if self._rng.random() < 0.45:   # 45% chance to swing
-                        votes[m] = decision
-                        self._trust[m] = min(1.0, self._trust[m] + 0.05)
+            for m in BOARD_MEMBERS:
+                if votes[m] == decision:
+                    continue
+                ps = _score_pitch(pitch, m)         # [0, 1]
+                if self._rng.random() < 0.55 * ps:
+                    votes[m] = decision
+                    self._trust[m] = min(1.0, self._trust[m] + 0.05)
 
         # CEO vote weight 1.5
         vote_counts = {opt: 0.0 for opt in self._obs.options}
@@ -260,28 +318,23 @@ def make_env(seed: int = 0):
     return BoardSimEnv(seed=seed)
 
 
-# ── 3. Random baseline ────────────────────────────────────────────────────────
-print('=== Random baseline ===')
-N_BASELINE = 100
-baseline_finals, baseline_rewards = [], []
-
-for ep in range(N_BASELINE):
+# NOTE: the canonical baseline is "base Qwen3 with LoRA disabled", computed
+# AFTER the model is loaded. The pre-training random sanity check below is
+# kept only as a smoke test — it confirms the env is reachable and rewards
+# stay in range. It is NOT what the trained policy is benchmarked against.
+print('=== Pre-training random sanity check ===')
+N_SANITY = 50
+sanity_finals = []
+for ep in range(N_SANITY):
     env = make_env(seed=ep)
     result = env.reset(seed=ep)
     obs = result.observation
-    ep_r = 0.0
     while not result.done:
         result = env.step(BoardSimAction(decision=random.choice(obs.options)))
         obs = result.observation
-        ep_r += float(result.reward or 0.0)
-    baseline_finals.append(obs.state['profitability_score'])
-    baseline_rewards.append(ep_r)
-
-BASELINE_MEAN_PROFIT = statistics.mean(baseline_finals)
-BASELINE_MEAN_REWARD = statistics.mean(baseline_rewards)
-print(f'Random baseline: mean profitability = {BASELINE_MEAN_PROFIT:.2f}  '
-      f'(std {statistics.stdev(baseline_finals):.2f})')
-print(f'Random baseline: mean episode reward = {BASELINE_MEAN_REWARD:.2f}')
+    sanity_finals.append(obs.state['profitability_score'])
+print(f'Random sanity profit: {statistics.mean(sanity_finals):.2f} '
+      f'(std {statistics.stdev(sanity_finals):.2f})  — env smoke test only.')
 
 
 # ── 4. Load model (local, no token needed for open models) ────────────────────
@@ -321,21 +374,20 @@ print('Model + LoRA ready.')
 from trl import GRPOConfig, GRPOTrainer
 from datasets import Dataset
 
-SYSTEM_PROMPT = """You are Sarah Chen, CEO of NeuralEdge AI (Series B, ~14 months runway).
-Your board has 4 members with HIDDEN AGENDAS you cannot see directly:
-  - CTO: cares about engineering quality, team morale, product readiness.
-  - CFO: cares about cash discipline, runway, regulatory safety.
-  - Investor Rep: pushes growth-at-all-costs, market share, big exits.
-  - Independent: cares about reputation, governance, long-term consensus.
+SYSTEM_PROMPT = """You are the CEO of a mid-stage organization. Your board has 4 members with HIDDEN AGENDAS you cannot see directly:
+  - CTO: cares about operational excellence, engineering quality, team morale, and product readiness.
+  - CFO: cares about cash discipline, runway, and regulatory safety.
+  - Investor Rep: pushes growth, market share, and bold returns.
+  - Independent: cares about reputation, governance, and long-term consensus.
 
-Each round you see a market crisis, every NPC's pre-vote statement, and 3 options.
-Your decision is resolved by WEIGHTED VOTE (your weight 1.5x). A short COALITION PITCH
-that addresses opposing members' priorities can swing them toward your pick — write
-language that specifically appeals to whichever members oppose you.
+Each round you see a strategic event, every NPC's pre-vote statement, and 3 options.
+Your decision is resolved by WEIGHTED VOTE (your weight 2.5x). A short COALITION PITCH
+that is semantically aligned with opposing members' priorities can swing them toward
+your pick — write substantive arguments, not just buzzwords.
 
 Respond in EXACTLY this format on two lines:
 DECISION: <one of the option strings>
-PITCH: <one or two sentences arguing for it, using vocabulary that targets the opposing members>"""
+PITCH: <one or two sentences arguing for it, addressing the concerns of opposing members>"""
 
 
 def build_prompt(obs: BoardSimObservation) -> str:
@@ -438,14 +490,13 @@ losses   = [e['loss']  for e in log_history if 'loss' in e]
 
 plt.figure(figsize=(9, 5))
 plt.plot(steps_r, rewards, color='#1d6fff', linewidth=2, label='Qwen3-0.6B (GRPO)')
-plt.axhline(BASELINE_MEAN_REWARD, color='#c44', linestyle='--', linewidth=2,
-            label=f'Random baseline (mean = {BASELINE_MEAN_REWARD:.1f})')
 plt.title('GRPO training reward — BoardSim (local)')
 plt.xlabel('Training step'); plt.ylabel('Mean group reward')
 plt.legend(); plt.grid(alpha=0.3); plt.tight_layout()
 plt.savefig(ASSETS / 'reward_curve.png', dpi=150)
 plt.close()
-print('Saved reward_curve.png')
+print('Saved reward_curve.png  (base-model comparison is rendered in before_after.png — '
+      'reward-curve y-axis is per-step group reward, not directly comparable to a held-out eval mean.)')
 
 plt.figure(figsize=(9, 5))
 plt.plot(steps_l, losses, color='#7a2', linewidth=2)
@@ -482,7 +533,11 @@ def parse_completion(completion: str, options: list) -> tuple[str, str]:
     return decision, pitch
 
 
-def trained_action(obs: BoardSimObservation) -> tuple[str, str]:
+def _generate_action(obs: BoardSimObservation) -> tuple[str, str]:
+    """Greedy generation against whichever model state is currently active.
+    Wrap the call in `model.disable_adapter()` to evaluate the BASE Qwen3-0.6B
+    (i.e. without the LoRA delta) on the same seed. Without the wrapper this
+    runs the fine-tuned policy."""
     prompt = build_prompt(obs)
     inputs = tokenizer(prompt, return_tensors='pt', truncation=True,
                        max_length=MAX_SEQ_LEN).to(DEVICE)
@@ -498,46 +553,56 @@ def trained_action(obs: BoardSimObservation) -> tuple[str, str]:
     return parse_completion(completion, obs.options)
 
 
+def trained_action(obs: BoardSimObservation) -> tuple[str, str]:
+    return _generate_action(obs)
+
+
+def base_action(obs: BoardSimObservation) -> tuple[str, str]:
+    # peft's disable_adapter() context routes through the frozen base weights.
+    with model.disable_adapter():
+        return _generate_action(obs)
+
+
+def _run_eval(action_fn, n: int, seed_base: int = 10_000):
+    finals, pitches, steps = [], 0, 0
+    for ep in range(n):
+        env = make_env(seed=seed_base + ep)
+        result = env.reset(seed=seed_base + ep)
+        obs = result.observation
+        while not result.done:
+            decision, pitch = action_fn(obs)
+            if pitch.strip():
+                pitches += 1
+            steps += 1
+            result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
+            if not result.done:
+                obs = result.observation
+        finals.append(result.observation.state['profitability_score'])
+    return finals, pitches, steps
+
+
 EVAL_N = 50
-trained_finals, trained_pitches, trained_steps = [], 0, 0
+trained_finals, trained_pitches, trained_steps = _run_eval(trained_action, EVAL_N)
+base_finals,    base_pitches,    base_steps    = _run_eval(base_action,    EVAL_N)
 
-for ep in range(EVAL_N):
-    env = make_env(seed=10_000 + ep)
-    result = env.reset(seed=10_000 + ep)
-    obs = result.observation
-    while not result.done:
-        decision, pitch = trained_action(obs)
-        if pitch.strip():
-            trained_pitches += 1
-        trained_steps += 1
-        result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
-        if not result.done:
-            obs = result.observation
-    trained_finals.append(result.observation.state['profitability_score'])
+print(f'Fine-tuned Qwen3-0.6B (LoRA): {np.mean(trained_finals):.2f} +/- {np.std(trained_finals):.2f}')
+print(f'Base Qwen3-0.6B (no LoRA)   : {np.mean(base_finals):.2f} +/- {np.std(base_finals):.2f}')
+print(f'Pitches written - trained   : {trained_pitches}/{trained_steps} steps')
+print(f'Pitches written - base      : {base_pitches}/{base_steps} steps')
 
-random_finals_eval = []
-for ep in range(EVAL_N):
-    env = make_env(seed=10_000 + ep)
-    result = env.reset(seed=10_000 + ep)
-    obs = result.observation
-    while not result.done:
-        result = env.step(BoardSimAction(decision=random.choice(obs.options)))
-        if not result.done:
-            obs = result.observation
-    random_finals_eval.append(result.observation.state['profitability_score'])
+# Paired same-seed delta — the apples-to-apples picture.
+deltas = np.array(trained_finals) - np.array(base_finals)
+print(f'Mean paired delta (trained - base) = {deltas.mean():+.2f}  '
+      f'(median {np.median(deltas):+.2f}, win-rate {(deltas > 0).mean():.0%})')
 
-print(f'Trained Qwen3-0.6B: {np.mean(trained_finals):.2f} +/- {np.std(trained_finals):.2f}')
-print(f'Random baseline   : {np.mean(random_finals_eval):.2f} +/- {np.std(random_finals_eval):.2f}')
-print(f'Pitches written   : {trained_pitches}/{trained_steps} steps')
-
-# Before/after histogram
+# Before/after histogram — trained vs BASE model on same seeds.
 plt.figure(figsize=(9, 5))
 bins = np.linspace(0, 100, 25)
-plt.hist(random_finals_eval, bins=bins, alpha=0.6, color='#c44',
-         label=f'Random (mean={np.mean(random_finals_eval):.1f})')
+plt.hist(base_finals, bins=bins, alpha=0.6, color='#c44',
+         label=f'Base Qwen3-0.6B (mean={np.mean(base_finals):.1f})')
 plt.hist(trained_finals, bins=bins, alpha=0.6, color='#1d6fff',
-         label=f'Trained (mean={np.mean(trained_finals):.1f})')
-plt.title('Final profitability — random vs trained Qwen3-0.6B (50 held-out episodes)')
+         label=f'Fine-tuned + LoRA (mean={np.mean(trained_finals):.1f})')
+plt.title('Final profitability — base vs fine-tuned Qwen3-0.6B (50 held-out paired seeds)')
 plt.xlabel('Profitability score'); plt.ylabel('Episodes')
 plt.legend(); plt.grid(alpha=0.3); plt.tight_layout()
 plt.savefig(ASSETS / 'before_after.png', dpi=150)
@@ -591,20 +656,17 @@ print(f'ToM probe accuracy: {acc:.1%}  ({correct}/{total})  (random baseline ≈
 # ── 9. Trust trajectory ───────────────────────────────────────────────────────
 print('\n=== Trust trajectory ===')
 trust_trained = {r: [] for r in BOARD_MEMBERS}
-trust_random  = {r: [] for r in BOARD_MEMBERS}
+trust_base    = {r: [] for r in BOARD_MEMBERS}
 
 
-def collect_trust(policy: str, store: dict, n: int = 20, seed_base: int = 30_000):
+def collect_trust(action_fn, store: dict, n: int = 20, seed_base: int = 30_000):
     for ep in range(n):
         env = make_env(seed=seed_base + ep)
         result = env.reset(seed=seed_base + ep)
         obs = result.observation
         while not result.done:
-            if policy == 'trained':
-                decision, pitch = trained_action(obs)
-                result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
-            else:
-                result = env.step(BoardSimAction(decision=random.choice(obs.options)))
+            decision, pitch = action_fn(obs)
+            result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
             if not result.done:
                 obs = result.observation
         for entry in result.observation.state.get('trust_history', []):
@@ -617,19 +679,19 @@ def collect_trust(policy: str, store: dict, n: int = 20, seed_base: int = 30_000
                 store[role][idx].append(entry[role])
 
 
-collect_trust('trained', trust_trained)
-collect_trust('random',  trust_random)
+collect_trust(trained_action, trust_trained)
+collect_trust(base_action,    trust_base)
 
 plt.figure(figsize=(10, 6))
 colors = {'CTO': '#1d6fff', 'CFO': '#c44', 'Investor Rep': '#7a2', 'Independent': '#a3a'}
 for role, color in colors.items():
     means_t = [np.mean(x) if x else np.nan for x in trust_trained[role]]
-    means_r = [np.mean(x) if x else np.nan for x in trust_random[role]]
+    means_b = [np.mean(x) if x else np.nan for x in trust_base[role]]
     rounds  = list(range(len(means_t)))
-    plt.plot(rounds, means_t, color=color, linewidth=2, label=f'{role} (trained)')
-    plt.plot(rounds, means_r, color=color, linewidth=1.2, linestyle='--',
-             alpha=0.6, label=f'{role} (random)')
-plt.title('Per-round trust — trained agent (solid) vs random (dashed)')
+    plt.plot(rounds, means_t, color=color, linewidth=2, label=f'{role} (fine-tuned)')
+    plt.plot(rounds, means_b, color=color, linewidth=1.2, linestyle='--',
+             alpha=0.6, label=f'{role} (base)')
+plt.title('Per-round trust — fine-tuned (solid) vs base Qwen3-0.6B (dashed)')
 plt.xlabel('Round'); plt.ylabel('Trust [0.1, 1.0]')
 plt.legend(ncol=2, fontsize=8); plt.grid(alpha=0.3); plt.tight_layout()
 plt.savefig(ASSETS / 'trust_trajectory.png', dpi=150)
@@ -638,5 +700,5 @@ print(f'Saved {ASSETS}/trust_trajectory.png')
 
 print('\n=== Done! All charts saved to ./assets/ ===')
 print('When ready to push, run:')
-print('  model.push_to_hub("YOUR-USERNAME/neuraledge-boardroom-qwen3-lora")')
-print('  tokenizer.push_to_hub("YOUR-USERNAME/neuraledge-boardroom-qwen3-lora")')
+print('  model.push_to_hub("YOUR-USERNAME/boardsim-qwen3-lora")')
+print('  tokenizer.push_to_hub("YOUR-USERNAME/boardsim-qwen3-lora")')
