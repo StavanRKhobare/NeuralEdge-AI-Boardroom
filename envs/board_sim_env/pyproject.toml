@@ -1,0 +1,33 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-board_sim_env"
+version = "0.1.0"
+description = "NeuralEdge AI boardroom multi-agent simulation environment for OpenEnv (Theme 1: Multi-Agent Interactions)."
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]==0.2.3",
+    "pydantic>=2.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+server = "board_sim_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["board_sim_env", "board_sim_env.server"]
+package-dir = { "board_sim_env" = ".", "board_sim_env.server" = "server" }

@@ -1,0 +1,6 @@
+spec_version: 1
+name: board_sim_env
+type: http
+runtime: docker
+app: server.app:app
+port: 8000

@@ -1,0 +1,21 @@
+# Repo-wide dependencies (training side).
+# The env-only deps live in envs/board_sim_env/pyproject.toml.
+
+openenv-core==0.2.3
+trl>=0.12,<2.0
+transformers>=4.45
+torch>=2.4
+huggingface_hub>=0.25
+datasets>=3.0
+accelerate>=1.0
+wandb>=0.18
+pydantic>=2.0
+fastapi>=0.115
+uvicorn>=0.30
+matplotlib>=3.8
+<<<<<<< HEAD
+python-dotenv>=1.0
+=======
+>>>>>>> 220bc90 (Initial commit for OpenEnv Hackathon submission)
+# Unsloth: install separately on Colab via pip --no-deps to avoid PyPI conflicts:
+#   pip install --no-deps unsloth
