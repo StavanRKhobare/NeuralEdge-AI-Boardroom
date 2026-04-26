@@ -12,10 +12,11 @@ import AgentDecision from './components/AgentDecision.jsx'
 import VoteTally from './components/VoteTally.jsx'
 import HistoryTimeline from './components/HistoryTimeline.jsx'
 import EndScreen from './components/EndScreen.jsx'
+import RewardTrace from './components/RewardTrace.jsx'
 
 export default function App() {
     const { state, resetGame, stepGame, setSpeed, setPaused } = useGameStore()
-    const { obs, prevObs, done, loading, error, lastReward, lastInfo, speed, paused } = state
+    const { obs, prevObs, done, loading, error, lastReward, lastInfo, speed, paused, rewardTrace, cumReward } = state
 
     const [toast, setToast] = useState(null)
 
@@ -72,9 +73,10 @@ export default function App() {
             )}
 
             <div className="main-grid">
-                {/* Left — Trust + History */}
+                {/* Left — Trust + Reward + History */}
                 <div className="col-left">
                     <TrustPanel trust={curState?.trust} prevTrust={prevState?.trust} />
+                    <RewardTrace trace={rewardTrace} cumReward={cumReward} lastReward={lastReward} />
                     <HistoryTimeline history={curState?.history} />
                 </div>
 

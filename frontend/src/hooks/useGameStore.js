@@ -13,6 +13,8 @@ const initialState = {
     error: null,
     lastReward: null,
     lastInfo: null,
+    rewardTrace: [],   // per-step reward history this episode (drives RewardTrace panel)
+    cumReward: 0,      // running total reward this episode
     speed: 1.5,        // playback speed multiplier
     paused: true,      // start paused, user clicks Run
     seed: 42,
@@ -33,13 +35,16 @@ function reducer(state, action) {
                 done: action.payload.done,
                 lastReward: null,
                 lastInfo: action.payload.info,
+                rewardTrace: [],
+                cumReward: 0,
                 error: null,
             }
 
         case 'STEP_START':
             return { ...state, loading: true }
 
-        case 'STEP_SUCCESS':
+        case 'STEP_SUCCESS': {
+            const r = Number(action.payload.reward ?? 0)
             return {
                 ...state,
                 loading: false,
@@ -48,8 +53,11 @@ function reducer(state, action) {
                 done: action.payload.done,
                 lastReward: action.payload.reward,
                 lastInfo: action.payload.info,
+                rewardTrace: [...state.rewardTrace, r],
+                cumReward: state.cumReward + r,
                 error: null,
             }
+        }
 
         case 'SET_SPEED':
             return { ...state, speed: action.payload }

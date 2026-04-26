@@ -1,0 +1,4 @@
+Random-policy smoke (30 episodes):
+  mean final profitability = 41.25 +/- 15.80
+  mean episode reward      = 21.13 +/- 14.99
+  survival rate            = 73.3%

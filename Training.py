@@ -96,7 +96,7 @@ from unsloth import FastLanguageModel
 import torch
 import re
 
-MODEL_NAME  = 'Qwen/Qwen3-1.7B'  # ✅ confirmed exists, ~4 GB in 4-bit → ~10 GB headroom on T4
+MODEL_NAME  = 'Qwen/Qwen3-0.6B'
 MAX_SEQ_LEN = 2048
 
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -203,7 +203,7 @@ def run_episode(env, seed):
     }
 # -----------------------------------------------------------------------------
 
-# BASELINE — base Qwen3-4B (no fine-tuning).
+# BASELINE — base Qwen3-0.6B (no fine-tuning).
 # This is the apples-to-apples reference for measuring what fine-tuning buys
 # us. Random policies are not a competitive baseline for a 4 B language model
 # choosing among 3 well-formed strings.
@@ -219,12 +219,12 @@ with make_env().sync() as env:
         base_fmts.append(r['format_rate'])
         base_pitches.append(r['pitch_rate'])
         if (i + 1) % 10 == 0:
-            print(f'  base Qwen3-4B {i+1}/{len(BASELINE_SEEDS)}  profit={r["final_profit"]:.1f}')
+            print(f'  base Qwen3-0.6B {i+1}/{len(BASELINE_SEEDS)}  profit={r["final_profit"]:.1f}')
 
 BASELINE_MEAN_PROFIT = statistics.mean(base_finals)
 BASELINE_MEAN_REWARD = statistics.mean(base_rewards)
-print(f'Base Qwen3-4B profit  : {BASELINE_MEAN_PROFIT:.2f} \u00b1 {statistics.stdev(base_finals):.2f}')
-print(f'Base Qwen3-4B ep rwd  : {BASELINE_MEAN_REWARD:.2f} \u00b1 {statistics.stdev(base_rewards):.2f}')
+print(f'Base Qwen3-0.6B profit  : {BASELINE_MEAN_PROFIT:.2f} \u00b1 {statistics.stdev(base_finals):.2f}')
+print(f'Base Qwen3-0.6B ep rwd  : {BASELINE_MEAN_REWARD:.2f} \u00b1 {statistics.stdev(base_rewards):.2f}')
 print(f'Base format rate      : {statistics.mean(base_fmts):.0%}   pitch rate: {statistics.mean(base_pitches):.0%}')
 
 with open(DRIVE_DIR / 'baseline.json', 'w') as f:
@@ -422,14 +422,14 @@ def ema(xs, alpha=0.1):
 rewards_ema = ema(rewards, 0.1)
 slope, intercept, r_val, p_val, _ = spstats.linregress(steps, rewards)
 
-# Reward curve — vs base Qwen3-4B baseline (NOT random).
+# Reward curve — vs base Qwen3-0.6B baseline (NOT random).
 plt.figure(figsize=(9, 5))
 plt.plot(steps, rewards, alpha=0.3, lw=1, label='per-step group reward')
 plt.plot(steps, rewards_ema, lw=2.2, label='EMA (\u03b1=0.1)')
 plt.plot(steps, intercept + slope * steps, '--', lw=1.5,
          label=f'linear fit slope={slope:+.4f}/step  (p={p_val:.1e})')
 plt.axhline(BASELINE_MEAN_REWARD, ls=':', lw=2, color='#c44',
-            label=f'base Qwen3-4B baseline = {BASELINE_MEAN_REWARD:.2f}')
+            label=f'base Qwen3-0.6B baseline = {BASELINE_MEAN_REWARD:.2f}')
 plt.title('GRPO reward — BoardSim (vs same model w/o fine-tuning)')
 plt.xlabel('step'); plt.ylabel('mean group reward')
 plt.legend(); plt.grid(alpha=0.3); plt.tight_layout()
@@ -451,7 +451,7 @@ plt.xlabel('step'); plt.ylabel('rate'); plt.ylim(-0.05, 1.05)
 plt.legend(); plt.grid(alpha=0.3); plt.tight_layout()
 plt.savefig(ASSETS / 'format_compliance.png', dpi=150); plt.close()
 
-# Periodic eval — overlaid against base Qwen3-4B baseline so the reader
+# Periodic eval — overlaid against base Qwen3-0.6B baseline so the reader
 # can see the LoRA-trained policy progressively pull away from the base
 # model on held-out seeds.
 if eval_history:
@@ -462,7 +462,7 @@ if eval_history:
     plt.plot(es, epm, '-o', lw=2, label='held-out profitability (mean of 10 episodes)')
     plt.plot(es, erm, '-s', lw=2, label='held-out episode reward')
     plt.axhline(BASELINE_MEAN_PROFIT, ls=':', lw=1.5, color='#c44',
-                label=f'base Qwen3-4B profitability = {BASELINE_MEAN_PROFIT:.2f}')
+                label=f'base Qwen3-0.6B profitability = {BASELINE_MEAN_PROFIT:.2f}')
     plt.title('Periodic held-out eval during training (greedy)')
     plt.xlabel('training step'); plt.ylabel('value')
     plt.legend(); plt.grid(alpha=0.3); plt.tight_layout()
@@ -471,7 +471,7 @@ if eval_history:
 print(f'Linear-fit slope on reward: {slope:+.5f}/step (p={p_val:.2e}, R\u00b2={r_val**2:.3f})')
 print('Saved reward_curve.png, loss_curve.png, format_compliance.png, periodic_eval.png')
 # -----------------------------------------------------------------------------
-# Paired same-seed eval: fine-tuned vs BASE Qwen3-4B (adapters disabled).
+# Paired same-seed eval: fine-tuned vs BASE Qwen3-0.6B (adapters disabled).
 # This is the headline comparison. Same prompts, same env seeds, same
 # decoder, same parser — only the LoRA delta differs.
 # -----------------------------------------------------------------------------
@@ -495,7 +495,7 @@ with make_env().sync() as env:
         if (i + 1) % 10 == 0:
             print(f'  trained {i+1}/{EVAL_N}  profit={r["final_profit"]:.1f}')
 
-# Base Qwen3-4B (LoRA disabled) — paired seeds.
+# Base Qwen3-0.6B (LoRA disabled) — paired seeds.
 base_finals_paired, base_rewards_paired, base_fmt_paired, base_pitch_paired = [], [], [], []
 base_history_per_seed = []
 with make_env().sync() as env, model.disable_adapter():
@@ -512,8 +512,8 @@ with make_env().sync() as env, model.disable_adapter():
 tf, bf = np.array(trained_finals), np.array(base_finals_paired)
 tr, br = np.array(trained_rewards), np.array(base_rewards_paired)
 
-print(f'\nTrained Qwen3-4B profit : {tf.mean():.2f} \u00b1 {tf.std():.2f}')
-print(f'Base    Qwen3-4B profit : {bf.mean():.2f} \u00b1 {bf.std():.2f}')
+print(f'\nTrained Qwen3-0.6B profit : {tf.mean():.2f} \u00b1 {tf.std():.2f}')
+print(f'Base    Qwen3-0.6B profit : {bf.mean():.2f} \u00b1 {bf.std():.2f}')
 print(f'Trained ep reward       : {tr.mean():.2f} \u00b1 {tr.std():.2f}')
 print(f'Base    ep reward       : {br.mean():.2f} \u00b1 {br.std():.2f}')
 print(f'Trained format/pitch    : {np.mean(trained_fmt):.0%} / {np.mean(trained_pitch):.0%}')
@@ -567,9 +567,9 @@ with open(DRIVE_DIR / 'stats_summary.json', 'w') as f:
 bins = np.linspace(0, 100, 25)
 plt.figure(figsize=(9, 5))
 plt.hist(bf, bins=bins, alpha=0.55, color='#c44',
-         label=f'Base Qwen3-4B (mean={bf.mean():.1f})')
+         label=f'Base Qwen3-0.6B (mean={bf.mean():.1f})')
 plt.hist(tf, bins=bins, alpha=0.55, color='#1d6fff',
-         label=f'Fine-tuned Qwen3-4B (mean={tf.mean():.1f})')
+         label=f'Fine-tuned Qwen3-0.6B (mean={tf.mean():.1f})')
 plt.axvline(bf.mean(), color='#c44', ls='--', lw=1.5)
 plt.axvline(tf.mean(), color='#1d6fff', ls='--', lw=1.5)
 plt.title(f'Final profitability — paired same-seed (n={len(tf)})  '
@@ -584,7 +584,7 @@ plt.figure(figsize=(9, 5))
 plt.bar(range(len(diffs)), diffs[order],
         color=['#1d6fff' if x > 0 else '#c44' for x in diffs[order]])
 plt.axhline(0, color='k', lw=0.8)
-plt.title(f'Per-seed lift (fine-tuned \u2212 base Qwen3-4B), sorted  '
+plt.title(f'Per-seed lift (fine-tuned \u2212 base Qwen3-0.6B), sorted  '
           f'mean lift = {diffs.mean():+.1f}  CI=[{summary["paired_diff_95ci"][0]:+.1f}, {summary["paired_diff_95ci"][1]:+.1f}]')
 plt.xlabel('seed (sorted by lift)'); plt.ylabel('\u0394 profitability')
 plt.grid(alpha=0.3); plt.tight_layout()
@@ -592,7 +592,7 @@ plt.savefig(ASSETS / 'paired_delta.png', dpi=150); plt.close()
 print('Saved before_after.png, paired_delta.png')
 # -----------------------------------------------------------------------------
 # Per-event win-rate breakdown — for each of the 10 generic events, how often
-# did the fine-tuned policy win the boardroom vote vs base Qwen3-4B?
+# did the fine-tuned policy win the boardroom vote vs base Qwen3-0.6B?
 # This is the most direct picture of WHERE the fine-tuning helps.
 # -----------------------------------------------------------------------------
 def per_event_winrate(history_per_seed):
@@ -614,8 +614,8 @@ bw = [base_wr.get(e, 0.0)    for e in events_sorted]
 
 plt.figure(figsize=(11, 5))
 x = np.arange(len(events_sorted))
-plt.bar(x - 0.2, bw, width=0.4, color='#c44', label='Base Qwen3-4B')
-plt.bar(x + 0.2, tw, width=0.4, color='#1d6fff', label='Fine-tuned Qwen3-4B')
+plt.bar(x - 0.2, bw, width=0.4, color='#c44', label='Base Qwen3-0.6B')
+plt.bar(x + 0.2, tw, width=0.4, color='#1d6fff', label='Fine-tuned Qwen3-0.6B')
 plt.xticks(x, [e[:22] for e in events_sorted], rotation=30, ha='right')
 plt.ylim(0, 1.05); plt.ylabel('boardroom win rate')
 plt.title('Per-event boardroom win rate (paired seeds, n=50 episodes)')

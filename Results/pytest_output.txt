@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0 -- /home/stavan-khobare/Desktop/No more confusions/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/stavan-khobare/Desktop/No more confusions/SST-MetaxPyTorch-Hackathon
+plugins: anyio-4.13.0
+collecting ... collected 21 items
+
+tests/test_environment.py::test_reset_is_deterministic_per_seed PASSED   [  4%]
+tests/test_environment.py::test_different_seeds_produce_different_event_orders PASSED [  9%]
+tests/test_environment.py::test_observation_schema PASSED                [ 14%]
+tests/test_environment.py::test_npc_role_set_and_weights PASSED          [ 19%]
+tests/test_environment.py::test_episode_terminates_at_or_before_ten_rounds PASSED [ 23%]
+tests/test_environment.py::test_step_returns_required_fields PASSED      [ 28%]
+tests/test_environment.py::test_per_step_reward_dense_and_bounded_until_terminal PASSED [ 33%]
+tests/test_environment.py::test_format_penalty_for_invalid_decision PASSED [ 38%]
+tests/test_environment.py::test_pitch_bootstrap_increases_reward_vs_empty_pitch PASSED [ 42%]
+tests/test_environment.py::test_profitability_score_in_range PASSED      [ 47%]
+tests/test_environment.py::test_trust_persists_and_updates PASSED        [ 52%]
+tests/test_environment.py::test_ceo_weight_dominates_when_no_persuasion PASSED [ 57%]
+tests/test_environment.py::test_random_policy_survives_majority_of_episodes PASSED [ 61%]
+tests/test_inference_helpers.py::test_parses_well_formed_two_line_completion PASSED [ 66%]
+tests/test_inference_helpers.py::test_falls_back_to_substring_match_when_format_partially_broken PASSED [ 71%]
+tests/test_inference_helpers.py::test_returns_first_option_when_completion_unintelligible PASSED [ 76%]
+tests/test_inference_helpers.py::test_pitch_clipped_to_first_line PASSED [ 80%]
+tests/test_inference_helpers.py::test_keyword_pitch_score_rewards_role_alignment PASSED [ 85%]
+tests/test_inference_helpers.py::test_keyword_pitch_score_zero_on_empty_pitch PASSED [ 90%]
+tests/test_inference_helpers.py::test_random_policy_act_returns_valid_option PASSED [ 95%]
+tests/test_inference_helpers.py::test_run_summary_aggregates_metrics_correctly PASSED [100%]
+
+============================== 21 passed in 2.90s ==============================

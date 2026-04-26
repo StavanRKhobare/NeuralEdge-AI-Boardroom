@@ -262,11 +262,11 @@ Three normalisations in the reward function so terms are commensurate:
 
 ---
 
-## 8. The baseline — same Qwen3-4B with LoRA disabled
+## 8. The baseline — same Qwen3-0.6B with LoRA disabled
 
 Earlier revisions compared the trained policy against a uniform-random policy. A coin flip is not a meaningful opponent for a 4 B language model picking among 3 well-formed strings — it can only highlight that the LM ≠ noise, which is not the relevant question.
 
-The current baseline runs **the same Qwen3-4B**, on the **same paired seeds**, with the LoRA adapter context-managed off. Implementation (see `Training.py` / `notebooks/train_grpo_v2.ipynb`):
+The current baseline runs **the same Qwen3-0.6B**, on the **same paired seeds**, with the LoRA adapter context-managed off. Implementation (see `Training.py` / `notebooks/train_grpo_v2.ipynb`):
 
 ```python
 # Fine-tuned (LoRA active)

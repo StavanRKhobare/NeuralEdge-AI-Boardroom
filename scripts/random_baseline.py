@@ -2,7 +2,7 @@
 
 NOTE: this is **not** the canonical baseline used in the headline
 trained-vs-baseline comparison. The canonical baseline is
-**base Qwen3-4B without LoRA**, computed inside `notebooks/train_grpo_v2.ipynb`
+**base Qwen3-0.6B without LoRA**, computed inside `notebooks/train_grpo_v2.ipynb`
 (and the mirrored `Training.py` script). A coin-flip is not a
 competitive opponent for a 4 B language model choosing among 3
 well-formed strings; we keep this script only as a quick env-health

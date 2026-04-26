@@ -1175,3 +1175,48 @@ body::after {
     .npc-grid { grid-template-columns: 1fr; }
     .decision-options-grid { grid-template-columns: 1fr; }
 }
+/* ── Reward Trace panel ─────────────────────────────────────────── */
+.reward-bars {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    height: 72px;
+    padding: 0.15rem 0.1rem 1.05rem;
+    border: 1px solid var(--border-dim);
+    background: linear-gradient(180deg, rgba(51,255,0,0.04), rgba(0,0,0,0.0));
+    position: relative;
+}
+.reward-bar-slot {
+    position: relative;
+    height: 100%;
+    border-left: 1px dashed var(--border-dim);
+}
+.reward-bar-slot:first-child { border-left: none; }
+.reward-bar-slot.empty { opacity: 0.35; }
+
+.reward-bar-up,
+.reward-bar-down {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    transition: height 0.25s ease;
+}
+.reward-bar-up   { background: var(--primary);   box-shadow: var(--glow-sm); }
+.reward-bar-down { background: var(--error);     box-shadow: 0 0 4px rgba(255,51,51,0.45); }
+
+.reward-bar-zero {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--muted);
+    pointer-events: none;
+}
+.reward-bar-label {
+    position: absolute;
+    bottom: -1.1rem;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    letter-spacing: 0;
+}
