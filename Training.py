@@ -7,7 +7,6 @@
     "datasets>=3.0" "accelerate>=1.0" "huggingface_hub>=0.25" "pydantic>=2.0" \
     wandb matplotlib python-dotenv bitsandbytes scipy scikit-learn sentence-transformers
 import os, pathlib
-
 # Colab Secrets first
 try:
     from google.colab import userdata  # type: ignore
@@ -46,6 +45,7 @@ if os.environ.get('WANDB_API_KEY'):
     wandb.login(key=os.environ['WANDB_API_KEY'])
     print('W&B auth ok.')
 import os, pathlib
+
 IN_COLAB = os.path.isdir('/content')
 if IN_COLAB:
     from google.colab import drive
@@ -91,21 +91,13 @@ def make_env():
 
 print('BoardSimEnv ready.')
 # -----------------------------------------------------------------------------
-# Load base Qwen3-4B (NO LoRA yet). The base model serves a dual role:
-#   (a) it is the reference baseline against which the fine-tuned policy is
-#       compared — this replaces the older random-policy baseline, which was
-#       not meaningful (a coin-flip is not a competitive opponent for an LLM).
-#   (b) once the baseline is recorded, we wrap the SAME model with LoRA
-#       adapters and fine-tune it. At paired-eval time we toggle the adapters
-#       off via `model.disable_adapter()` to recover base-model behaviour
-#       without reloading 4 GB of weights.
-# -----------------------------------------------------------------------------
 import unsloth  # noqa: F401
 from unsloth import FastLanguageModel
 import torch
+import re
 
-MODEL_NAME  = 'Qwen/Qwen3-4B'
-MAX_SEQ_LEN = 4096
+MODEL_NAME  = 'Qwen/Qwen3-1.7B'  # ✅ confirmed exists, ~4 GB in 4-bit → ~10 GB headroom on T4
+MAX_SEQ_LEN = 2048
 
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name=MODEL_NAME,
@@ -118,8 +110,9 @@ if tokenizer.pad_token is None:
 
 device = next(model.parameters()).device
 print(f'Loaded {MODEL_NAME} on {device}.')
-import re
-
+mem_gb = torch.cuda.memory_allocated() / 1e9
+print(f'GPU memory after base load: {mem_gb:.2f} GB / 14.56 GB')
+print(f'Headroom for compute:       {14.56 - mem_gb:.2f} GB')
 # Generic CEO prompt — applies to any organization, not a specific industry.
 SYSTEM_PROMPT = """You are the CEO of a mid-stage organization. Your board has 4 members with HIDDEN AGENDAS you cannot see directly:
   - CTO: cares about operational excellence, engineering quality, team morale, and product readiness.
@@ -209,6 +202,7 @@ def run_episode(env, seed):
         'history': obs.state.get('history', []),
     }
 # -----------------------------------------------------------------------------
+
 # BASELINE — base Qwen3-4B (no fine-tuning).
 # This is the apples-to-apples reference for measuring what fine-tuning buys
 # us. Random policies are not a competitive baseline for a 4 B language model
@@ -682,97 +676,6 @@ print(f'ToM probe: trained = {tom_acc:.1%} ({t_corr}/{t_tot})   base = {tom_acc_
 with open(DRIVE_DIR / 'tom.json', 'w') as f:
     json.dump({'trained': {'correct': t_corr, 'total': t_tot, 'accuracy': tom_acc},
                'base':    {'correct': b_corr, 'total': b_tot, 'accuracy': tom_acc_base}}, f)
-ROLES = ['CTO','CFO','Investor Rep','Independent']
-trust_trained = {r: [] for r in ROLES}
-trust_base    = {r: [] for r in ROLES}
-
-def collect_trust(store, n=20, seed_base=90_000, base_mode=False):
-    with make_env().sync() as env:
-        for ep in range(n):
-            result = env.reset(seed=seed_base + ep)
-            obs = result.observation
-            steps_done = 0
-            while not result.done and steps_done < MAX_STEPS_PER_EP:
-                decision, pitch, _ = greedy_action(obs)
-                result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
-                obs = result.observation
-                steps_done += 1
-            for entry in obs.state.get('trust_history', []):
-                idx = entry.get('round', 0)
-                for role in store:
-                    if role not in entry: continue
-                    while len(store[role]) <= idx:
-                        store[role].append([])
-                    store[role][idx].append(entry[role])
-
-collect_trust(trust_trained)
-with model.disable_adapter():
-    collect_trust(trust_base, base_mode=True)
-
-plt.figure(figsize=(10, 6))
-for role, color in zip(ROLES, ['#1d6fff','#c44','#7a2','#a3a']):
-    mt = [np.mean(x) if x else np.nan for x in trust_trained[role]]
-    mb = [np.mean(x) if x else np.nan for x in trust_base[role]]
-    plt.plot(range(len(mt)), mt, color=color, lw=2,            label=f'{role} (fine-tuned)')
-    plt.plot(range(len(mb)), mb, color=color, lw=1.2, ls='--', alpha=0.6, label=f'{role} (base)')
-plt.title('Per-round trust — fine-tuned (solid) vs base Qwen3-4B (dashed)')
-plt.xlabel('round'); plt.ylabel('trust [0.1, 1.0]')
-plt.legend(ncol=2, fontsize=8); plt.grid(alpha=0.3); plt.tight_layout()
-plt.savefig(ASSETS / 'trust_trajectory.png', dpi=150); plt.close()
-print('Saved trust_trajectory.png')
-def transcript(env, seed, mode):
-    """mode in {'trained', 'base'}."""
-    rec = {'seed': seed, 'mode': mode, 'rounds': []}
-    result = env.reset(seed=seed)
-    obs = result.observation
-    n = 0
-    while not result.done and n < MAX_STEPS_PER_EP:
-        decision, pitch, ok = greedy_action(obs)
-        result = env.step(BoardSimAction(decision=decision, coalition_pitch=pitch))
-        rec['rounds'].append({
-            'event': obs.event, 'options': list(obs.options),
-            'decision': decision, 'pitch': pitch[:300], 'format_ok': ok,
-            'reward': float(result.reward or 0.0),
-            'profit_after': result.observation.state['profitability_score'],
-        })
-        obs = result.observation; n += 1
-    rec['final_profit'] = obs.state['profitability_score']
-    return rec
-
-transcripts = []
-DEMO_SEEDS = [70_000, 70_001, 70_002]
-with make_env().sync() as env:
-    for s in DEMO_SEEDS:
-        transcripts.append(transcript(env, s, 'trained'))
-with make_env().sync() as env, model.disable_adapter():
-    for s in DEMO_SEEDS:
-        transcripts.append(transcript(env, s, 'base'))
-with open(DRIVE_DIR / 'transcripts.json', 'w') as f:
-    json.dump(transcripts, f, indent=2)
-
-for t in transcripts:
-    print(f"\n=== seed={t['seed']}  mode={t['mode']}  final_profit={t['final_profit']:.1f} ===")
-    for i, rd in enumerate(t['rounds'][:3]):
-        print(f"  R{i}: {rd['event'][:60]}\u2026 \u2192 {rd['decision']}  r={rd['reward']:+.2f}")
-        if rd['pitch']:
-            print(f"      pitch: {rd['pitch'][:120]}")
-with open(DRIVE_DIR / 'decision_counter.json') as f:
-    dc = json.load(f)
-labels = list(dc.keys())
-counts = np.array(list(dc.values()), dtype=float)
-p = counts / counts.sum()
-entropy = float(-(p * np.log(p + 1e-12)).sum())
-max_ent = float(np.log(len(p)))
-print(f'Decision entropy: {entropy:.3f} / {max_ent:.3f} (1.0 = uniform)  ratio={entropy/max_ent:.2%}')
-
-plt.figure(figsize=(9, 5))
-order = np.argsort(-counts)
-plt.bar([labels[i] for i in order][:15], counts[order][:15])
-plt.xticks(rotation=45, ha='right')
-plt.title(f'Top-15 decisions during training (entropy={entropy:.2f}/{max_ent:.2f})')
-plt.ylabel('count'); plt.tight_layout()
-plt.savefig(ASSETS / 'decision_distribution.png', dpi=150); plt.close()
-print('Saved decision_distribution.png')
 from huggingface_hub import HfApi
 ADAPTER_REPO = os.environ.get('ADAPTER_REPO', 'StavanKhobare/SST-MetaxPyTorch-Hackathon-LoRA')
 MERGED_REPO  = os.environ.get('MERGED_REPO',  'StavanKhobare/SST-MetaxPyTorch-Hackathon-Merged16bit')

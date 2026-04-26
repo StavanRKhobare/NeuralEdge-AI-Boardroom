@@ -644,6 +644,56 @@ class BoardSimEnvironment(Environment):
             s["runway_months"] = _clamp("runway_months", s["runway_months"] - burn_months)
 
     def step(self, action: BoardSimAction, timeout_s: Optional[float] = None, **kwargs: Any) -> BoardSimObservation:
+        """Resolve one boardroom round: vote → consequences → trust update → reward.
+
+        Reward structure (applied at the end of this method):
+
+            STEP-LEVEL (dense, bounded ≈ [-0.7, +0.65]):
+                reward  = (new_profit_score - old_profit_score) / 100.0     # primary signal,   ≈ ±0.20
+                reward += +1.0 if winning_decision == agent_decision        # coalition outcome
+                          else -0.4
+                reward += 0.5 * (Σ trust_after - Σ trust_before)            # trust delta,      ≈ ±0.16
+                if coalition_pitch is non-empty:
+                    reward += 0.05                                          # exploration bootstrap
+                    if any NPC opposed CEO's pick:
+                        reward += 0.6 * mean(pitch_score over opposing NPCs)  # ToM persuasion, ∈ [0, +0.6]
+                if action.decision not in current_round.options:
+                    reward -= 0.5                                           # format / anti-exploit penalty
+
+            TERMINAL (episodic spikes — by design, gives strong end-of-episode signal):
+                if runway_months <= 0:
+                    reward -= 2.0                                           # bankruptcy
+                if terminal:
+                    reward += event._terminal_bonus                         # acquisition +30, IPO +25, stay-private +5
+                    reward += {+10 if final_score >= 60,
+                               +5  if final_score >= 40,
+                               -5  if final_score <  20}
+
+        Total reward range across an episode is approximately [-7, +45]:
+        the per-step terms keep the trajectory dense and bounded, the
+        terminal bonuses produce intentional spikes that distinguish
+        outcome quality (acquisition vs IPO vs stay-private vs bankruptcy).
+        High variance in plotted training curves is therefore *expected*,
+        not unstable.
+
+        Design notes:
+          * `format penalty (-0.5)` makes the action format part of the reward
+            and prevents the policy from gaming pitch persuasion by emitting
+            free-form text outside the `DECISION: / PITCH:` two-line schema.
+          * `pitch bootstrap (+0.05)` ensures the pitch channel is exercised
+            at all before the model is good enough to earn the semantic
+            persuasion bonus (+0.6 × pitch_score). Without this, RL can
+            collapse to always-empty pitches and never explore the channel.
+          * `pitch_score(pitch, role) ∈ [0, 1]` is computed by the
+            `_PitchScorer` (sentence-transformer cosine, TF-IDF fallback)
+            against each role's hidden manifesto — *graded language*, not
+            keyword matching, so pitches must genuinely articulate role
+            priorities.
+          * `coalition ±1.0 / -0.4` keeps the agent honest about *winning
+            votes*, not just picking option strings that look good.
+          * `trust × 0.5` rewards long-arc coalition building rather than
+            single-round opportunism.
+        """
         s = self._state.state_dict
 
         if s["done_reason"] is not None or s["round"] > len(EVENTS):
